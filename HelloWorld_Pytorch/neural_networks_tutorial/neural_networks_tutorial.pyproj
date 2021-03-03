@@ -24,7 +24,13 @@
     <Compile Include="DataHelpers.py">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="EyeDataSet.py">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="FullyConnectedNetwork.py">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="HelloDataLoader.py">
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="neural_networks_tutorial.py" />

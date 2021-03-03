@@ -7,10 +7,10 @@
 import DataHelpers
 from PIL import Image
 
-(xTrainFilePaths, yTrain, xTestPaths, yTest) = DataHelpers.LoadRawData('D:\escamilla\dataset_B_Eye_Images')
+(xTrainFilePaths, yTrain, xTestFilePaths, yTest) = DataHelpers.LoadRawData('dataset_Eye_Images')
 
 xTrainImages = [Image.open(path) for path in xTrainFilePaths]
-xTestImages = [Image.open(path) for path in xTrainFilePaths]
+xTestImages = [Image.open(path) for path in xTestFilePaths]
 
 ###
 # Get the data into Pytorch's data structures
@@ -22,10 +22,22 @@ from torchvision import transforms
 xTrainTensor = torch.stack([transforms.ToTensor()(image) for image in xTrainImages ])
 yTrainTensor = torch.Tensor( [ [yValue ] for yValue in yTrain ])
 
-print( xTrainTensor.size())
-print( yTrainTensor.size())
+print( len(xTestImages))
+print( len(yTest))
 
 xTestTensor = torch.stack( [transforms.ToTensor()(image) for image in xTestImages])
+
+###
+#   Move the data onto the GPU (or CPU if there's no cuda device avaliable)
+### 
+
+device = torch.device("cuda:0"  if torch.cuda.is_available() else "cpu")
+print("Device is:", device)
+
+xTrainTensorDevice = xTrainTensor.to(device)
+yTrainTensorDevice = yTrainTensor.to(device)
+
+xTestTensorDevice = xTestTensor.to(device)
 
 ###
 # Set up for the training run
@@ -33,6 +45,9 @@ xTestTensor = torch.stack( [transforms.ToTensor()(image) for image in xTestImage
 
 import FullyConnectedNetwork
 model = FullyConnectedNetwork.FullyConnectedNetwork(hiddenNodes=5)
+
+# copy model onto device
+model = model.to(device)
 
 # Loss function (error metric): Mean Square Error, Binary Cross Error (y, y') := y* -log(y') + (1-y)* -log(1-y') 
 # "How hard the algorithm should work to correct any particular mistake that it makes"
@@ -48,7 +63,7 @@ lossFunction = torch.nn.BCELoss()
 optimizer = torch.optim.SGD(model.parameters(), lr= 1.5e-3)
 
 ###
-# Train the model
+# Train the model on the device
 ###
 
 import time
@@ -57,10 +72,10 @@ startTrainingTime = time.time()
 # Just for the helloWorld run, in reality we'd have a convergence criterium here
 for i in range(2500):
     # 1. Forward Propagation
-    yTrainPredicted = model(xTrainTensor)
+    yTrainPredicted = model(xTrainTensorDevice)
 
     # 2. Calculate the loss
-    loss = lossFunction(yTrainPredicted, yTrainTensor)
+    loss = lossFunction(yTrainPredicted, yTrainTensorDevice)
 
     # 3. Back propagation
     # reset optimizer
@@ -73,7 +88,7 @@ for i in range(2500):
     # take one step in the direction of the gradient
     optimizer.step()
 
-    print(" Iteration: %d loss: %.4f"   %   (i, loss.item()))
+    #print(" Iteration: %d loss: %.4f"   %   (i, loss.item()))
 
 endTrainingTime = time.time()
 
@@ -88,7 +103,7 @@ model.train(mode=False)
 
 yTestPredicted = model(xTestTensor)
 
-predictions = [ 1 if probability > 0.5 else 0 for probability in yTestPredicted]
+predictions = [ 1 if probability > .5 else 0 for probability in yTestPredicted]
 
 correct = [ 1 if predictions[i] == yTest[i] else 0 for i in range( len(predictions) ) ]
 
